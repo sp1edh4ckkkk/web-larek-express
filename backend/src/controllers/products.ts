@@ -1,77 +1,28 @@
-import {
-  Request,
-  Response,
-  NextFunction,
-} from 'express';
-import mongoose, { Error as MongooseError } from 'mongoose';
+import { NextFunction, Request, Response } from 'express';
+import mongoose from 'mongoose';
 import Product from '../models/product';
-import BadRequestError from '../errors/bad-request-error';
-import ConflictError from '../errors/conflict-error';
+import BadRequestError from './errors/bad-request-error';
+import ConflictError from './errors/conflict-error';
 
-type ImageInfo = {
-  fileName: string;
-  originalName: string;
-};
+export const getProducts = (_req: Request, res: Response, next: NextFunction) => Product.find({})
+  .select('title image.fileName image.originalName category description price _id')
+  .then((productsList) => res.status(200).send({ items: productsList, total: productsList.length }))
+  .catch((err) => next(err));
 
-type CreateProductBody = {
-  title: string;
-  image: ImageInfo;
-  category: string;
-  description?: string;
-  price?: number | null;
-};
+export const createProduct = (req: Request, res: Response, next: NextFunction) => {
+  const bodyObject = req.body;
 
-export const getProducts = async (
-  _req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
-  try {
-    const products = await Product.find();
-    res.json({
-      items: products,
-      total: products.length,
+  return Product.create(bodyObject)
+    .then((product) => res.status(201).send({ product }))
+    .catch((err) => {
+      if (err instanceof mongoose.Error.ValidationError) {
+        next(new BadRequestError(err.message));
+      }
+
+      if (err instanceof Error && err.message.includes('E11000')) {
+        next(new ConflictError('Товар с таким названием уже существует'));
+      }
+
+      next(err);
     });
-  } catch (error) {
-    next(error as Error);
-  }
-};
-
-export const createProduct = async (
-  req: Request<unknown, unknown, CreateProductBody>,
-  res: Response,
-  next: NextFunction,
-) => {
-  try {
-    const {
-      title,
-      image,
-      category,
-      description,
-      price,
-    } = req.body;
-
-    const product = await Product.create({
-      title,
-      image,
-      category,
-      description,
-      price,
-    });
-
-    res.status(201).json(product);
-  } catch (error: unknown) {
-    if (error instanceof MongooseError.ValidationError
-      || error instanceof mongoose.Error.ValidationError) {
-      next(new BadRequestError('Ошибка валидации данных при создании товара'));
-      return;
-    }
-
-    if (error instanceof Error && error.message.includes('E11000')) {
-      next(new ConflictError('Ошибка: товар с таким title уже существует'));
-      return;
-    }
-
-    next(error as Error);
-  }
 };
