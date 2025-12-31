@@ -1,51 +1,50 @@
-import { model, Schema } from 'mongoose';
+import mongoose, { Schema, Document } from 'mongoose';
 
-interface IImage { fileName: string, originalName: string; }
+type ImageInfo = {
+  fileName: string;
+  originalName: string;
+};
 
-interface IProduct {
-    title: string;
-    image: IImage;
-    category: string;
-    description?: string;
-    price?: number;
+export interface IProduct extends Document {
+  title: string;
+  image: ImageInfo;
+  category: string;
+  description?: string;
+  price?: number | null;
 }
-
-const imageSchema = new Schema<IImage>({
-  fileName: {
-    type: String,
-    required: true,
-  },
-  originalName: {
-    type: String,
-    required: true,
-  },
-});
 
 const productSchema = new Schema<IProduct>({
   title: {
     type: String,
-    minlength: 2,
-    maxlength: 30,
-    required: true,
     unique: true,
+    required: [true, 'Поле "title" должно быть заполнено'],
+    minlength: [2, 'Минимальная длина поля "title" - 2'],
+    maxlength: [30, 'Максимальная длина поля "title" - 30'],
   },
   image: {
-    type: imageSchema,
-    required: true,
+    fileName: {
+      type: String,
+      required: [true, 'Поле "image.fileName" должно быть заполнено'],
+    },
+    originalName: {
+      type: String,
+      required: [true, 'Поле "image.originalName" должно быть заполнено'],
+    },
   },
   category: {
     type: String,
-    required: true,
+    required: [true, 'Поле "category" должно быть заполнено'],
   },
   description: {
     type: String,
-    required: false,
   },
   price: {
     type: Number,
     default: null,
-    required: false,
   },
+}, {
+  versionKey: false,
+  collection: 'product',
 });
 
-export default model<IProduct>('product', productSchema);
+export default mongoose.model<IProduct>('product', productSchema);

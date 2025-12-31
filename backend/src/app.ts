@@ -1,31 +1,45 @@
-import express, { NextFunction, Request, Response } from 'express';
+import express, {
+  Request,
+  Response,
+  NextFunction,
+} from 'express';
 import cors from 'cors';
 import mongoose from 'mongoose';
 import path from 'path';
+import { errors } from 'celebrate';
+
 import { DB_ADDRESS, PORT } from './config';
+import router from './routes';
+import errorHandler from './middlewares/error-handler';
+import NotFoundError from './errors/not-found-error';
 import { requestLogger, errorLogger } from './middlewares/logger';
-import routesProduct from './routes/products';
-import routesOrder from './routes/orders';
-import errorHandler from './middlewares/error-middleware';
-import NotFoundError from './controllers/errors/not-found-error';
 
 const app = express();
-mongoose.connect(DB_ADDRESS);
-
-app.use(requestLogger);
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
-app.use('/product', routesProduct);
-app.use('/order', routesOrder);
 
-app.use((_req: Request, _res: Response, next: NextFunction) => {
-  next(new NotFoundError('Ресурс не найден'));
-});
+const publicPath = path.join(__dirname, 'public');
+app.use(express.static(publicPath));
+
+app.use(requestLogger);
+
+app.use(router);
+
+app.use(
+  (_req: Request, _res: Response, next: NextFunction) => {
+    next(new NotFoundError('Маршрут не найден'));
+  },
+);
 
 app.use(errorLogger);
 
+app.use(errors());
+
 app.use(errorHandler);
 
-app.listen(PORT, () => { console.log(`Listening on port ${PORT}`); });
+mongoose.connect(DB_ADDRESS)
+  .then(() => app.listen(Number(PORT)))
+  .catch(() => {});
+
+export default app;
