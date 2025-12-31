@@ -8,7 +8,7 @@ const errorHandler = (
   err: Error,
   _req: Request,
   res: Response,
-  _next: NextFunction
+  _next: NextFunction,
 ) => {
   if (err instanceof BadRequestError) {
     return res.status(err.statusCode).json({ message: err.message });
@@ -23,6 +23,6 @@ const errorHandler = (
     return res.status(400).json({ message: 'Ошибка валидации данных при создании товара' });
   }
   return res.status(500).json({ message: 'Непредвиденная ошибка на сервере.' });
-}
+};
 
 export default errorHandler;
